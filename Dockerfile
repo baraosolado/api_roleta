@@ -27,7 +27,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 RUN python3 -m playwright install chromium \
     && python3 -m playwright install-deps chromium
 
-COPY main.py roleta.html 
+COPY main.py roleta.html .
 
 EXPOSE 8000
 
