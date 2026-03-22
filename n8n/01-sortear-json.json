@@ -1,0 +1,94 @@
+{
+  "name": "Roleta — 01 Sortear (só JSON)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "a1e8b0c1-0001-4000-8000-000000000001",
+      "name": "Manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "content": "## Teste rápido (sem GIF)\n\n1. **n8n self‑hosted:** defina a variável de ambiente **ROLETTA_API_KEY** (igual à `API_KEY` da API). No Docker do n8n: `ROLETTA_API_KEY=...`.\n\n2. No nó **Config**, altere **base_url** para `http://SEU_IP:8000` ou domínio.\n\n3. Execute. O corpo da resposta traz **ganhadora** e **total**.\n\n4. Para GIF, importe o fluxo **02-sortear-gif.json**.",
+        "height": 400,
+        "width": 440,
+        "color": 4
+      },
+      "id": "a1e8b0c1-0001-4000-8000-000000000002",
+      "name": "Instruções",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-60, 40]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{\n  json: {\n    base_url: 'http://localhost:8000',\n    nomes: ['Ana Silva', 'Beatriz Costa', 'Carla Mendes']\n  }\n}];"
+      },
+      "id": "a1e8b0c1-0001-4000-8000-000000000003",
+      "name": "Config (URL e nomes)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.base_url }}/sortear",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.ROLETTA_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ nomes: $json.nomes, retornar_gif: false }) }}",
+        "options": {}
+      },
+      "id": "a1e8b0c1-0001-4000-8000-000000000004",
+      "name": "POST /sortear",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [540, 300]
+    }
+  ],
+  "connections": {
+    "Manual": {
+      "main": [
+        [
+          {
+            "node": "Config (URL e nomes)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config (URL e nomes)": {
+      "main": [
+        [
+          {
+            "node": "POST /sortear",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

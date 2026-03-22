@@ -66,13 +66,46 @@ O `docker-compose.yml` usa `env_file: .env` para injetar `API_KEY` no container.
 
 ## n8n
 
-No nó **HTTP Request**, em **Headers**, adicione:
+### Fluxos prontos (importar)
 
-| Name      | Value        |
-|-----------|--------------|
-| X-API-Key | sua-chave-aqui |
+Na pasta [`n8n/`](n8n/) há workflows em JSON para importar no n8n:
 
-O valor deve coincidir com `API_KEY` no `.env` do servidor.
+| Arquivo | Uso |
+|---------|-----|
+| `00-health.json` | `GET /health` — sem API Key (monitoramento) |
+| `01-sortear-json.json` | `POST /sortear` com `retornar_gif: false` — resposta JSON com `ganhadora` e `total` |
+| `02-sortear-gif.json` | `POST /sortear` com GIF binário (resposta como arquivo) |
+| `03-post-gif-fixo.json` | `POST /gif` — lista + `ganhadora` fixa |
+
+**Como importar:** no n8n, **Workflows** → menu **⋯** → **Import from File** → escolha o `.json`.
+
+### Variável de ambiente no n8n
+
+Os fluxos usam **`{{ $env.ROLETTA_API_KEY }}`** no header **X-API-Key**. Defina no processo do n8n o mesmo valor da `API_KEY` da API:
+
+- **Docker (n8n):** no `docker-compose` ou `-e ROLETTA_API_KEY=...`
+- **systemd / PM2 / host:** exporte `ROLETTA_API_KEY` antes de subir o n8n
+
+**Alternativa sem env:** no nó **HTTP Request**, em **Specify Headers**, troque o valor por texto fixo (apenas testes) ou use credencial **Header Auth** (`X-API-Key`).
+
+### Configurar URL da API
+
+Em cada fluxo, edite o nó **Config** (ou **Code**) e altere `base_url` de `http://localhost:8000` para `http://SEU_IP_OU_DOMINIO:8000`.
+
+### Resposta GIF
+
+No fluxo **02**, o HTTP Request está com **Response → File** e **Full Response** para facilitar ver headers (**X-Ganhadora**, **X-Total**). Depois encadeie **Telegram**, **Google Drive**, **Move Binary Data**, etc., conforme seu caso.
+
+### Montagem manual (HTTP Request)
+
+| Campo | Valor |
+|-------|--------|
+| Method | `POST` |
+| URL | `http://SEU_SERVIDOR:8000/sortear` |
+| Header | `X-API-Key`: mesma chave do `.env` da API |
+| Body (JSON) | `{"nomes": ["Ana", "Bia"], "retornar_gif": true}` |
+
+Para só JSON: `"retornar_gif": false`.
 
 ## Endpoints
 

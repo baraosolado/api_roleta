@@ -1,0 +1,101 @@
+{
+  "name": "Roleta — 03 POST /gif (ganhadora fixa)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "c3e8b0c1-0001-4000-8000-000000000001",
+      "name": "Manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "content": "## GIF com ganhadora já definida\n\nÚtil quando o sorteio foi feito no BD e você só precisa gerar o vídeo/GIF para **uma** ganhadora.\n\n- **ganhadora** deve existir em **nomes**.\n- Mesma variável **ROLETTA_API_KEY**.",
+        "height": 260,
+        "width": 400,
+        "color": 6
+      },
+      "id": "c3e8b0c1-0001-4000-8000-000000000002",
+      "name": "Instruções",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-40, 60]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{\n  json: {\n    base_url: 'http://localhost:8000',\n    nomes: ['Ana Silva', 'Beatriz Costa', 'Carla Mendes'],\n    ganhadora: 'Ana Silva'\n  }\n}];"
+      },
+      "id": "c3e8b0c1-0001-4000-8000-000000000003",
+      "name": "Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.base_url }}/gif",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.ROLETTA_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ nomes: $json.nomes, ganhadora: $json.ganhadora }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "c3e8b0c1-0001-4000-8000-000000000004",
+      "name": "POST /gif",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [540, 300]
+    }
+  ],
+  "connections": {
+    "Manual": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "POST /gif",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "name": "Roleta — 00 Health (público)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "d4e8b0c1-0001-4000-8000-000000000001",
+      "name": "Manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "content": "## GET /health\n\nNão usa **X-API-Key**. Útil para monitorar se a API está no ar.\n\nEdite a URL no nó **HTTP**.",
+        "height": 200,
+        "width": 320,
+        "color": 3
+      },
+      "id": "d4e8b0c1-0001-4000-8000-000000000002",
+      "name": "Instruções",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-20, 120]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://localhost:8000/health",
+        "authentication": "none",
+        "options": {}
+      },
+      "id": "d4e8b0c1-0001-4000-8000-000000000003",
+      "name": "GET /health",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [280, 300]
+    }
+  ],
+  "connections": {
+    "Manual": {
+      "main": [
+        [
+          {
+            "node": "GET /health",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}

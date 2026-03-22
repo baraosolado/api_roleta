@@ -1,0 +1,101 @@
+{
+  "name": "Roleta — 02 Sortear (GIF)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "b2e8b0c1-0001-4000-8000-000000000001",
+      "name": "Manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "content": "## Sorteio com GIF\n\n1. Variável de ambiente **ROLETTA_API_KEY** (mesmo valor da `API_KEY` da API).\n\n2. Ajuste **base_url** no nó **Config**.\n\n3. O nó HTTP usa **Response → File** para receber o GIF binário.\n\n4. Headers da resposta: **X-Ganhadora**, **X-Total** (visíveis no painel de saída do nó ou com *Full Response* se ativar).\n\n5. Próximo passo típico: **Telegram**, **Google Drive**, **Write Binary File** ou **Respond to Webhook**.",
+        "height": 460,
+        "width": 460,
+        "color": 5
+      },
+      "id": "b2e8b0c1-0001-4000-8000-000000000002",
+      "name": "Instruções",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-80, 20]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{\n  json: {\n    base_url: 'http://localhost:8000',\n    nomes: ['Ana Silva', 'Beatriz Costa', 'Carla Mendes']\n  }\n}];"
+      },
+      "id": "b2e8b0c1-0001-4000-8000-000000000003",
+      "name": "Config (URL e nomes)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.base_url }}/sortear",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.ROLETTA_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ nomes: $json.nomes, retornar_gif: true }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "b2e8b0c1-0001-4000-8000-000000000004",
+      "name": "POST /sortear (GIF)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [540, 300]
+    }
+  ],
+  "connections": {
+    "Manual": {
+      "main": [
+        [
+          {
+            "node": "Config (URL e nomes)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config (URL e nomes)": {
+      "main": [
+        [
+          {
+            "node": "POST /sortear (GIF)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}
