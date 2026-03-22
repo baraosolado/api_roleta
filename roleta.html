@@ -7,7 +7,8 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@400;500&display=swap');
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:#1a0a10;font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
+  html,body{overflow-x:hidden}
+  body{background:#1a0a10;font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:1rem}
   #wrap{width:100%;max-width:480px}
   #header{background:linear-gradient(135deg,#b5005a 0%,#7a003c 60%,#3d001e 100%);padding:1.5rem;text-align:center;border-radius:16px 16px 0 0;position:relative}
   #header::after{content:'';display:block;height:3px;background:linear-gradient(90deg,#f7c6df,#e8006b,#f7c6df);margin-top:1rem;border-radius:2px}
@@ -322,7 +323,11 @@ window.iniciarSorteio = function(nomes, ganhadora) {
       const d = new Date();
       document.getElementById('result-date').textContent =
         'Sorteio realizado em ' + d.toLocaleDateString('pt-BR') + ' — Salão Maravilhas';
-      document.getElementById('result').classList.add('show');
+      const resEl = document.getElementById('result');
+      resEl.classList.add('show');
+      requestAnimationFrame(() => {
+        resEl.scrollIntoView({ block: 'center', behavior: 'instant' });
+      });
       startConfettiCelebration();
       window._sorteioFinalizado = true;
     }

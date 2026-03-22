@@ -88,7 +88,8 @@ async def _capture_roleta_gif(nomes: list[str], ganhadora: str) -> bytes:
             ],
         )
         try:
-            page = await browser.new_page(viewport={"width": 480, "height": 780})
+            # Altura >780px: com muitos participantes + roleta + cartão do resultado o layout passa de 780px e o GIF cortava o nome (viewport antigo do PRD).
+            page = await browser.new_page(viewport={"width": 480, "height": 1200})
             await page.set_content(html, wait_until="domcontentloaded")
             await page.wait_for_timeout(1000)
 
@@ -111,6 +112,13 @@ async def _capture_roleta_gif(nomes: list[str], ganhadora: str) -> bytes:
                 raise RuntimeError(
                     "Timeout: animação da roleta não finalizou (_sorteioFinalizado)."
                 )
+
+            await page.evaluate(
+                """() => {
+                    const el = document.getElementById('result');
+                    if (el) el.scrollIntoView({ block: 'center', behavior: 'instant' });
+                }""",
+            )
 
             result_pngs: list[bytes] = []
             for _ in range(25):
