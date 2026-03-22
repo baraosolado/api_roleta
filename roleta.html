@@ -228,6 +228,75 @@ function startConfettiCelebration(){
   drawConfettiFrame();
 }
 
+let __roletaAudioCtx = null;
+let __spinSource = null;
+let __spinNodes = [];
+
+function getRoletaAudioContext(){
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if(!AC) return null;
+  if(!__roletaAudioCtx) __roletaAudioCtx = new AC();
+  return __roletaAudioCtx;
+}
+
+async function startRoletaSpinSound(){
+  const ctx = getRoletaAudioContext();
+  if(!ctx) return;
+  await ctx.resume();
+  stopRoletaSpinSound();
+  const n = 2 * ctx.sampleRate;
+  const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for(let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * 0.45;
+  __spinSource = ctx.createBufferSource();
+  __spinSource.buffer = buf;
+  __spinSource.loop = true;
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = 380;
+  const g = ctx.createGain();
+  g.gain.value = 0.085;
+  __spinSource.connect(lp);
+  lp.connect(g);
+  g.connect(ctx.destination);
+  __spinNodes = [__spinSource, g, lp];
+  __spinSource.start();
+}
+
+function stopRoletaSpinSound(){
+  try{
+    if(__spinSource){
+      __spinSource.stop();
+      __spinSource.disconnect();
+    }
+  }catch(e){}
+  __spinSource = null;
+  __spinNodes.forEach(n => { try{ n.disconnect(); }catch(e){} });
+  __spinNodes = [];
+}
+
+async function playRoletaWinSound(){
+  const ctx = getRoletaAudioContext();
+  if(!ctx) return;
+  await ctx.resume();
+  const hz = [523.25, 659.25, 783.99, 1046.5];
+  const t0 = ctx.currentTime + 0.02;
+  hz.forEach((f, i) => {
+    const t = t0 + i * 0.1;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.value = f;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.22, t + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.62);
+    osc.connect(g);
+    g.connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.7);
+  });
+}
+
 function eligible(){ return clients.filter(c => !c.sorteada) }
 function normalizeAngle(a){ return ((a % (Math.PI*2)) + Math.PI*2) % (Math.PI*2) }
 
@@ -304,6 +373,7 @@ window.iniciarSorteio = function(nomes, ganhadora) {
   const startAngle = wheelAngle;
   const exactFinalAngle = normalizeAngle(startAngle + delta);
   const start = performance.now();
+  void startRoletaSpinSound();
   function ease(t){ return 1 - Math.pow(1-t, 4) }
 
   function frame(now){
@@ -312,6 +382,8 @@ window.iniciarSorteio = function(nomes, ganhadora) {
     drawWheel();
     if(t < 1){ requestAnimationFrame(frame) }
     else {
+      stopRoletaSpinSound();
+      void playRoletaWinSound();
       wheelAngle = exactFinalAngle;
       spinning = false;
       const winner = el[winnerIdx];

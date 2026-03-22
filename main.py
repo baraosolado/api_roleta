@@ -89,6 +89,7 @@ async def _capture_roleta_gif(nomes: list[str], ganhadora: str) -> bytes:
                 "--no-sandbox",
                 "--disable-dev-shm-usage",
                 "--disable-gpu",
+                "--autoplay-policy=no-user-gesture-required",
             ],
         )
         try:
@@ -139,10 +140,74 @@ async def gerar_gif_bytes(nomes: list[str], ganhadora: str) -> bytes:
     return await _capture_roleta_gif(nomes, ganhadora)
 
 
+async def _ffprobe_duration_seconds(path: str) -> float:
+    proc = await asyncio.create_subprocess_exec(
+        "ffprobe",
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "default=noprint_wrappers=1:nokey=1",
+        path,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.DEVNULL,
+    )
+    out, _ = await proc.communicate()
+    if proc.returncode != 0:
+        raise RuntimeError("ffprobe falhou ao ler duração")
+    return float(out.decode().strip())
+
+
+async def _mux_roleta_audio(mp4_in: str, mp4_out: str) -> None:
+    duration = await _ffprobe_duration_seconds(mp4_in)
+    d_spin = f"{duration:.4f}"
+    win_len = min(0.4, max(0.12, duration * 0.12))
+    delay_ms = max(0, int((duration - win_len) * 1000))
+    fade_st = max(0.0, duration - 0.75)
+    fc = (
+        f"anoisesrc=color=pink:sample_rate=44100:amplitude=0.09:d={d_spin},"
+        f"lowpass=f=520,afade=t=out:st={fade_st:.4f}:d=0.45[spin];"
+        f"sine=frequency=523.25:sample_rate=44100:duration=0.09[s1];"
+        f"sine=frequency=659.25:sample_rate=44100:duration=0.09[s2];"
+        f"sine=frequency=783.99:sample_rate=44100:duration=0.14[s3];"
+        f"[s1][s2][s3]concat=n=3:v=0:a=1[winseq];"
+        f"[winseq]adelay={delay_ms}|{delay_ms}[win];"
+        f"[spin][win]amix=inputs=2:duration=first:normalize=0[a]"
+    )
+    proc = await asyncio.create_subprocess_exec(
+        "ffmpeg",
+        "-y",
+        "-i",
+        mp4_in,
+        "-filter_complex",
+        fc,
+        "-map",
+        "0:v",
+        "-map",
+        "[a]",
+        "-c:v",
+        "copy",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "160k",
+        "-movflags",
+        "faststart",
+        mp4_out,
+        stdout=asyncio.subprocess.DEVNULL,
+        stderr=asyncio.subprocess.DEVNULL,
+    )
+    await proc.communicate()
+    if proc.returncode != 0:
+        raise RuntimeError(f"ffmpeg mux áudio código {proc.returncode}")
+
+
 async def gif_bytes_para_mp4(gif_bytes: bytes) -> bytes:
     base = f"/tmp/roleta_{uuid.uuid4().hex}"
     gif_path = f"{base}.gif"
-    mp4_path = f"{base}.mp4"
+    mp4_silent = f"{base}.silent.mp4"
+    mp4_final = f"{base}.final.mp4"
     try:
         async with aiofiles.open(gif_path, "wb") as f:
             await f.write(gif_bytes)
@@ -157,17 +222,25 @@ async def gif_bytes_para_mp4(gif_bytes: bytes) -> bytes:
             "yuv420p",
             "-vf",
             "scale=trunc(iw/2)*2:trunc(ih/2)*2",
-            mp4_path,
+            mp4_silent,
             stdout=asyncio.subprocess.DEVNULL,
             stderr=asyncio.subprocess.DEVNULL,
         )
         await proc.communicate()
         if proc.returncode != 0:
-            raise RuntimeError(f"ffmpeg saiu com código {proc.returncode}")
-        async with aiofiles.open(mp4_path, "rb") as f:
+            raise RuntimeError(f"ffmpeg GIF→MP4 código {proc.returncode}")
+
+        read_path = mp4_silent
+        try:
+            await _mux_roleta_audio(mp4_silent, mp4_final)
+            read_path = mp4_final
+        except (RuntimeError, ValueError, OSError):
+            pass
+
+        async with aiofiles.open(read_path, "rb") as f:
             return await f.read()
     finally:
-        for p in (gif_path, mp4_path):
+        for p in (gif_path, mp4_silent, mp4_final):
             try:
                 os.unlink(p)
             except OSError:

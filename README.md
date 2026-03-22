@@ -76,6 +76,7 @@ Na pasta [`n8n/`](n8n/) há workflows em JSON para importar no n8n:
 | `01-sortear-json.json` | `POST /sortear` com `retornar_gif: false` — resposta JSON com `ganhadora` e `total` |
 | `02-sortear-gif.json` | `POST /sortear` com GIF binário (resposta como arquivo) |
 | `03-post-gif-fixo.json` | `POST /gif` — lista + `ganhadora` fixa |
+| `04-sortear-video.json` | `POST /sortear/video` — MP4 (GIF + ffmpeg no servidor) |
 
 **Como importar:** no n8n, **Workflows** → menu **⋯** → **Import from File** → escolha o `.json`.
 
@@ -92,9 +93,9 @@ Os fluxos usam **`{{ $env.ROLETTA_API_KEY }}`** no header **X-API-Key**. Defina 
 
 Em cada fluxo, edite o nó **Config** (ou **Code**) e altere `base_url` de `http://localhost:8000` para `http://SEU_IP_OU_DOMINIO:8000`.
 
-### Resposta GIF
+### Resposta GIF / MP4
 
-No fluxo **02**, o HTTP Request está com **Response → File** e **Full Response** para facilitar ver headers (**X-Ganhadora**, **X-Total**). Depois encadeie **Telegram**, **Google Drive**, **Move Binary Data**, etc., conforme seu caso.
+Nos fluxos **02** e **04**, o HTTP Request usa **Response → File** e **Full Response** para binário e headers (**X-Ganhadora**, **X-Total**). O **04** retorna **`video/mp4`** (demora mais: Playwright + ffmpeg). Depois encadeie **Telegram**, **Google Drive**, **Move Binary Data**, etc.
 
 ### Montagem manual (HTTP Request)
 
@@ -107,12 +108,15 @@ No fluxo **02**, o HTTP Request está com **Response → File** e **Full Respons
 
 Para só JSON: `"retornar_gif": false`.
 
+**Vídeo (MP4):** `POST /sortear/video` com o mesmo body; use `retornar_gif: true` para gerar o vídeo (com `false` a API responde só JSON).
+
 ## Endpoints
 
 | Método | Rota       | Auth   | Descrição        |
 |--------|------------|--------|------------------|
 | GET    | `/health`  | Não    | Status do serviço |
 | POST   | `/sortear` | Sim    | Sorteio (+ GIF opcional) |
+| POST   | `/sortear/video` | Sim | Sorteio → MP4 (ffmpeg) |
 | POST   | `/gif`     | Sim    | GIF com ganhadora fixa |
 
-Documentação interativa: `http://localhost:8000/docs` (use **Authorize** com a mesma API Key para testar `/sortear` e `/gif`).
+Documentação interativa: `http://localhost:8000/docs` (use **Authorize** com a mesma API Key).

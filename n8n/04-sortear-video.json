@@ -1,0 +1,101 @@
+{
+  "name": "Roleta — 04 Sortear (MP4)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "e5e8b0c1-0001-4000-8000-000000000001",
+      "name": "Manual",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "content": "## Sorteio em vídeo (MP4)\n\nChama **`POST /sortear/video`**: gera o GIF no servidor, converte com **ffmpeg** e devolve **MP4**.\n\n1. **ROLETTA_API_KEY** no ambiente do n8n (igual à `API_KEY` da API).\n\n2. Ajuste **base_url** no nó **Config**.\n\n3. Body usa **`retornar_gif: true`**. Se for **`false`**, a API só devolve JSON (sem vídeo).\n\n4. **Response → File** + **Full Response** para binário e headers **X-Ganhadora**, **X-Total**.\n\n5. Demora **mais** que o GIF (Playwright + ffmpeg). Encaixe **Telegram**, **Google Drive**, **Write Binary File**, etc.\n\n6. O header **Content-Disposition** sugere o nome `sorteio_maravilhas.mp4`.",
+        "height": 520,
+        "width": 480,
+        "color": 2
+      },
+      "id": "e5e8b0c1-0001-4000-8000-000000000002",
+      "name": "Instruções",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-100, 0]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{\n  json: {\n    base_url: 'http://localhost:8000',\n    nomes: ['Ana Silva', 'Beatriz Costa', 'Carla Mendes']\n  }\n}];"
+      },
+      "id": "e5e8b0c1-0001-4000-8000-000000000003",
+      "name": "Config (URL e nomes)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.base_url }}/sortear/video",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.ROLETTA_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ nomes: $json.nomes, retornar_gif: true }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "e5e8b0c1-0001-4000-8000-000000000004",
+      "name": "POST /sortear/video",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [540, 300]
+    }
+  ],
+  "connections": {
+    "Manual": {
+      "main": [
+        [
+          {
+            "node": "Config (URL e nomes)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config (URL e nomes)": {
+      "main": [
+        [
+          {
+            "node": "POST /sortear/video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}
