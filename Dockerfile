@@ -22,6 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
+# Contexto: pasta api_roleta (docker build . ou compose nesta pasta)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -29,6 +30,7 @@ RUN python3 -m playwright install chromium \
     && python3 -m playwright install-deps chromium
 
 COPY main.py roleta.html .
+COPY assets/ ./assets/
 
 EXPOSE 8000
 
