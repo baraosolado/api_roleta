@@ -1,5 +1,5 @@
 #!/bin/bash
-apt update -y && apt install -y python3 python3-pip python3-venv
+apt update -y && apt install -y python3 python3-pip python3-venv ffmpeg
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt

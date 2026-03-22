@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpango-1.0-0 \
     libcairo2 \
     fonts-liberation \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

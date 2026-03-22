@@ -4,3 +4,4 @@ playwright
 Pillow
 python-multipart
 python-dotenv
+aiofiles

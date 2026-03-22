@@ -1,7 +1,11 @@
+import asyncio
 import io
 import os
 import random
+import uuid
 from pathlib import Path
+
+import aiofiles
 
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, Security, status
@@ -131,6 +135,45 @@ async def _capture_roleta_gif(nomes: list[str], ganhadora: str) -> bytes:
     return _png_frames_to_gif(spin_pngs, result_pngs)
 
 
+async def gerar_gif_bytes(nomes: list[str], ganhadora: str) -> bytes:
+    return await _capture_roleta_gif(nomes, ganhadora)
+
+
+async def gif_bytes_para_mp4(gif_bytes: bytes) -> bytes:
+    base = f"/tmp/roleta_{uuid.uuid4().hex}"
+    gif_path = f"{base}.gif"
+    mp4_path = f"{base}.mp4"
+    try:
+        async with aiofiles.open(gif_path, "wb") as f:
+            await f.write(gif_bytes)
+        proc = await asyncio.create_subprocess_exec(
+            "ffmpeg",
+            "-y",
+            "-i",
+            gif_path,
+            "-movflags",
+            "faststart",
+            "-pix_fmt",
+            "yuv420p",
+            "-vf",
+            "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+            mp4_path,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        await proc.communicate()
+        if proc.returncode != 0:
+            raise RuntimeError(f"ffmpeg saiu com código {proc.returncode}")
+        async with aiofiles.open(mp4_path, "rb") as f:
+            return await f.read()
+    finally:
+        for p in (gif_path, mp4_path):
+            try:
+                os.unlink(p)
+            except OSError:
+                pass
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "servico": "Roleta Salão Maravilhas"}
@@ -159,6 +202,38 @@ async def sortear(body: SortearBody):
     )
 
 
+@app.post("/sortear/video", dependencies=[Depends(validar_api_key)])
+async def sortear_video(body: SortearBody):
+    nomes = _normalize_nomes(body.nomes)
+    if not nomes:
+        raise HTTPException(status_code=422, detail="Lista de nomes vazia após normalização.")
+
+    ganhadora = random.choice(nomes)
+    total = len(nomes)
+
+    if not body.retornar_gif:
+        return JSONResponse(content={"ganhadora": ganhadora, "total": total})
+
+    gif_bytes = await gerar_gif_bytes(nomes, ganhadora)
+    try:
+        mp4_bytes = await gif_bytes_para_mp4(gif_bytes)
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Falha ao converter GIF em MP4: {e}",
+        ) from e
+
+    return StreamingResponse(
+        io.BytesIO(mp4_bytes),
+        media_type="video/mp4",
+        headers={
+            "X-Ganhadora": ganhadora,
+            "X-Total": str(total),
+            "Content-Disposition": 'attachment; filename="sorteio_maravilhas.mp4"',
+        },
+    )
+
+
 @app.post("/gif", dependencies=[Depends(validar_api_key)])
 async def gif_only(body: GifBody):
     nomes = _normalize_nomes(body.nomes)
@@ -183,7 +258,7 @@ _OPENAPI_HTTP_METHODS = frozenset(
     {"get", "post", "put", "delete", "patch", "head", "options", "trace"},
 )
 
-_OPENAPI_PROTECTED_PATHS = frozenset({"/sortear", "/gif"})
+_OPENAPI_PROTECTED_PATHS = frozenset({"/sortear", "/sortear/video", "/gif"})
 
 
 def custom_openapi():
