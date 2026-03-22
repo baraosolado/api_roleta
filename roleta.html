@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sorteio — Salão Maravilhas</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@400;500&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#1a0a10;font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
+  #wrap{width:100%;max-width:480px}
+  #header{background:linear-gradient(135deg,#b5005a 0%,#7a003c 60%,#3d001e 100%);padding:1.5rem;text-align:center;border-radius:16px 16px 0 0;position:relative}
+  #header::after{content:'';display:block;height:3px;background:linear-gradient(90deg,#f7c6df,#e8006b,#f7c6df);margin-top:1rem;border-radius:2px}
+  .star{position:absolute;color:#f9b8d4;opacity:.4;font-size:15px}
+  .salon-title{font-family:'Playfair Display',serif;font-size:26px;font-weight:700;color:#fff;letter-spacing:1px}
+  .salon-title span{color:#f9b8d4;font-weight:400}
+  .salon-sub{font-size:11px;color:#f9b8d4;letter-spacing:3px;text-transform:uppercase;margin-top:4px}
+  .salon-info{display:flex;justify-content:center;gap:16px;margin-top:.8rem;font-size:11px;color:#f9b8d4;opacity:.8}
+  #body{background:#1a0a10;border-radius:0 0 16px 16px;padding:1.5rem;border:1px solid rgba(181,0,90,0.3);border-top:none}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:1.2rem}
+  .stat{background:rgba(181,0,90,0.15);border:1px solid rgba(181,0,90,0.35);border-radius:10px;padding:.75rem;text-align:center}
+  .stat-n{font-size:22px;font-weight:700;color:#f9b8d4}
+  .stat-l{font-size:10px;color:#f9b8d480;letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+  .section-title{text-align:center;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#f9b8d4;font-weight:500;margin-bottom:.9rem}
+  #participants{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:1.2rem;min-height:32px}
+  .p-chip{font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid #b5005a;color:#f9b8d4;background:rgba(181,0,90,0.15)}
+  .p-chip.winner{background:#b5005a;color:#fff;border-color:#e8006b;font-weight:500}
+  #wheel-area{display:flex;flex-direction:column;align-items:center;margin-bottom:1.2rem}
+  #pointer{width:0;height:0;border-left:13px solid transparent;border-right:13px solid transparent;border-top:26px solid #f9b8d4;margin-bottom:-5px;z-index:10;position:relative;filter:drop-shadow(0 2px 6px rgba(249,184,212,0.6))}
+  canvas{border-radius:50%;display:block;box-shadow:0 0 0 5px #3d001e,0 0 0 9px #b5005a,0 0 32px rgba(181,0,90,0.5)}
+  #spin-btn{margin-top:1.2rem;padding:13px 36px;font-size:15px;font-weight:600;border-radius:30px;border:none;cursor:pointer;background:linear-gradient(135deg,#e8006b,#b5005a);color:#fff;box-shadow:0 4px 18px rgba(232,0,107,0.45);font-family:'DM Sans',sans-serif;letter-spacing:.3px}
+  #spin-btn:hover{opacity:.88}
+  #spin-btn:disabled{opacity:.35;cursor:not-allowed}
+  #result{display:none;margin-top:1.1rem;background:linear-gradient(135deg,rgba(181,0,90,0.2),rgba(232,0,107,0.1));border:1.5px solid #e8006b;border-radius:14px;padding:1.3rem;text-align:center}
+  #result.show{display:block;animation:popIn .5s cubic-bezier(.34,1.56,.64,1)}
+  @keyframes popIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+  .result-label{font-size:11px;letter-spacing:3px;color:#f9b8d4;text-transform:uppercase;margin-bottom:.4rem}
+  .result-name{font-size:24px;font-weight:700;color:#fff;font-family:'Playfair Display',serif;margin-bottom:.3rem}
+  .result-date{font-size:11px;color:#f9b8d460}
+  .confetti-row{font-size:18px;letter-spacing:4px;margin-bottom:.5rem}
+  .reset-btn{display:block;margin:.7rem auto 0;font-size:12px;color:#f9b8d450;background:none;border:none;cursor:pointer;text-decoration:underline;font-family:'DM Sans',sans-serif}
+  .reset-btn:hover{color:#f9b8d4}
+  #footer{margin-top:1rem;text-align:center;font-size:11px;color:#f9b8d430;letter-spacing:1px}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="header">
+    <div class="star" style="top:12px;left:16px">✦</div>
+    <div class="star" style="top:12px;right:16px">✦</div>
+    <div class="star" style="bottom:22px;left:38px;font-size:10px">✦</div>
+    <div class="star" style="bottom:22px;right:38px;font-size:10px">✦</div>
+    <div class="salon-title">✦ Salão <span>Maravilhas</span></div>
+    <div class="salon-sub">Beleza & Bem-estar</div>
+    <div class="salon-info">
+      <span>📍 Jd Interlagos</span>
+      <span>📞 43998502056</span>
+      <span>✉️ maravilhas@gmail.com</span>
+    </div>
+  </div>
+  <div id="body">
+    <br>
+    <div class="stats">
+      <div class="stat"><div class="stat-n" id="s-total">0</div><div class="stat-l">Total</div></div>
+      <div class="stat"><div class="stat-n" id="s-eleg">0</div><div class="stat-l">Elegíveis</div></div>
+      <div class="stat"><div class="stat-n" id="s-sort">0</div><div class="stat-l">Sorteadas</div></div>
+    </div>
+    <div class="section-title">Participantes</div>
+    <div id="participants"></div>
+    <div class="section-title">Roleta do sorteio</div>
+    <div id="wheel-area">
+      <div id="pointer"></div>
+      <canvas id="wheel" width="260" height="260"></canvas>
+      <button id="spin-btn" onclick="spin()">✨ Girar a Roleta</button>
+      <button class="reset-btn" onclick="resetAll()">Resetar sorteios (novo ciclo)</button>
+    </div>
+    <div id="result">
+      <div class="confetti-row">🎉 🌸 🎊</div>
+      <div class="result-label">Sorteada do mês</div>
+      <div class="result-name" id="result-name"></div>
+      <div class="result-date" id="result-date"></div>
+    </div>
+  </div>
+  <div id="footer">✦ Salão Maravilhas — Consórcio Dia 10 ✦</div>
+</div>
+<script>
+const COLORS=['#b5005a','#7a003c','#d4006b','#e8006b','#8c0047','#c2005f','#99004f','#bf0062','#6e0038','#a80055'];
+const EXTRA_SPINS = 8 * Math.PI * 2;
+const DURATION = 5000;
+let clients = [];
+let spinning = false;
+let wheelAngle = 0;
+
+function eligible(){ return clients.filter(c => !c.sorteada) }
+function normalizeAngle(a){ return ((a % (Math.PI*2)) + Math.PI*2) % (Math.PI*2) }
+
+function render(){
+  const el = eligible();
+  document.getElementById('s-total').textContent = clients.length;
+  document.getElementById('s-eleg').textContent = el.length;
+  document.getElementById('s-sort').textContent = clients.filter(c=>c.sorteada).length;
+  const btn = document.getElementById('spin-btn');
+  if(btn) btn.disabled = el.length < 1;
+  document.getElementById('participants').innerHTML = clients.map((c,i) =>
+    `<span class="p-chip ${c.sorteada?'winner':''}">${c.sorteada?'✓ ':''}${c.name}</span>`
+  ).join('');
+  drawWheel();
+}
+
+function drawWheel(){
+  const canvas = document.getElementById('wheel');
+  const ctx = canvas.getContext('2d');
+  const cx=130, cy=130, r=122;
+  const el = eligible();
+  ctx.clearRect(0,0,260,260);
+  if(!el.length){
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
+    ctx.fillStyle='#3d001e'; ctx.fill();
+    ctx.fillStyle='#f9b8d480'; ctx.font='13px sans-serif';
+    ctx.textAlign='center'; ctx.fillText('Todas sorteadas!',cx,cy);
+    return;
+  }
+  const slice = (Math.PI*2) / el.length;
+  el.forEach((c,i) => {
+    const s = wheelAngle + i*slice, e = s + slice;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,s,e); ctx.closePath();
+    ctx.fillStyle = COLORS[i % COLORS.length]; ctx.fill();
+    ctx.strokeStyle = '#1a0a10'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.save();
+    ctx.translate(cx,cy); ctx.rotate(s + slice/2);
+    ctx.textAlign='right'; ctx.fillStyle='rgba(255,255,255,0.92)';
+    ctx.font='bold 11px DM Sans,sans-serif';
+    ctx.fillText(c.name.split(' ')[0], r-8, 4);
+    ctx.restore();
+  });
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.strokeStyle='#e8006b'; ctx.lineWidth=3; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx,cy,20,0,Math.PI*2);
+  ctx.fillStyle='#1a0a10'; ctx.fill();
+  ctx.strokeStyle='#f9b8d4'; ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle='#f9b8d4'; ctx.font='bold 13px sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('✦',cx,cy);
+}
+
+// ─── Esta função é chamada pelo Playwright após carregar a página ───
+window.iniciarSorteio = function(nomes, ganhadora) {
+  clients = nomes.map(n => ({ name: n, sorteada: false }));
+  render();
+
+  const el = eligible();
+  const winnerIdx = el.findIndex(c => c.name === ganhadora);
+  if(winnerIdx === -1) return;
+
+  spinning = true;
+  const slice = (Math.PI*2) / el.length;
+  wheelAngle = normalizeAngle(wheelAngle);
+  const pointerAngle = (3 * Math.PI) / 2;
+  let targetAngle = normalizeAngle(pointerAngle - winnerIdx * slice - slice / 2);
+  let delta = targetAngle - wheelAngle;
+  if(delta <= 0) delta += Math.PI * 2;
+  delta += EXTRA_SPINS;
+
+  const startAngle = wheelAngle;
+  const start = performance.now();
+  function ease(t){ return 1 - Math.pow(1-t, 4) }
+
+  function frame(now){
+    const t = Math.min((now - start) / DURATION, 1);
+    wheelAngle = startAngle + delta * ease(t);
+    drawWheel();
+    if(t < 1){ requestAnimationFrame(frame) }
+    else {
+      wheelAngle = normalizeAngle(wheelAngle);
+      spinning = false;
+      const winner = el[winnerIdx];
+      const idx = clients.findIndex(c => c.name === winner.name);
+      clients[idx].sorteada = true;
+      render();
+      document.getElementById('result-name').textContent = winner.name;
+      const d = new Date();
+      document.getElementById('result-date').textContent =
+        'Sorteio realizado em ' + d.toLocaleDateString('pt-BR') + ' — Salão Maravilhas';
+      document.getElementById('result').classList.add('show');
+      window._sorteioFinalizado = true;
+    }
+  }
+  requestAnimationFrame(frame);
+}
+</script>
+</body>
+</html>

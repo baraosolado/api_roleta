@@ -1,0 +1,13 @@
+services:
+  roleta:
+    build: .
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    environment:
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - roleta_tmp:/tmp
+
+volumes:
+  roleta_tmp:
