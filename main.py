@@ -1,14 +1,33 @@
 import io
+import os
 import random
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from dotenv import load_dotenv
+from fastapi import Depends, FastAPI, HTTPException, Security, status
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.security import APIKeyHeader
 from PIL import Image
 from playwright.async_api import async_playwright
 from pydantic import BaseModel, Field
 
+load_dotenv()
+API_KEY = os.getenv("API_KEY")
+
 app = FastAPI(title="Roleta Salão Maravilhas")
+
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+
+async def validar_api_key(key: str | None = Security(api_key_header)):
+    if not key or key != API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="API Key inválida ou ausente",
+        )
+    return key
+
 
 _HTML_CACHE: str | None = None
 
@@ -109,7 +128,7 @@ async def health():
     return {"status": "ok", "servico": "Roleta Salão Maravilhas"}
 
 
-@app.post("/sortear")
+@app.post("/sortear", dependencies=[Depends(validar_api_key)])
 async def sortear(body: SortearBody):
     nomes = _normalize_nomes(body.nomes)
     if not nomes:
@@ -132,7 +151,7 @@ async def sortear(body: SortearBody):
     )
 
 
-@app.post("/gif")
+@app.post("/gif", dependencies=[Depends(validar_api_key)])
 async def gif_only(body: GifBody):
     nomes = _normalize_nomes(body.nomes)
     if not nomes:
@@ -150,3 +169,43 @@ async def gif_only(body: GifBody):
         media_type="image/gif",
         headers={"X-Ganhadora": g},
     )
+
+
+_OPENAPI_HTTP_METHODS = frozenset(
+    {"get", "post", "put", "delete", "patch", "head", "options", "trace"},
+)
+
+_OPENAPI_PROTECTED_PATHS = frozenset({"/sortear", "/gif"})
+
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    openapi_schema = get_openapi(
+        title=app.title,
+        version="1.0.0",
+        openapi_version=app.openapi_version,
+        description=getattr(app, "description", None),
+        routes=app.routes,
+    )
+    if API_KEY:
+        components = openapi_schema.setdefault("components", {})
+        schemes = components.setdefault("securitySchemes", {})
+        schemes["ApiKeyAuth"] = {
+            "type": "apiKey",
+            "in": "header",
+            "name": "X-API-Key",
+            "description": "Mesmo valor da variável API_KEY no arquivo .env do servidor.",
+        }
+        for path, path_item in openapi_schema.get("paths", {}).items():
+            if path not in _OPENAPI_PROTECTED_PATHS:
+                continue
+            for method in _OPENAPI_HTTP_METHODS:
+                op = path_item.get(method)
+                if isinstance(op, dict):
+                    op["security"] = [{"ApiKeyAuth": []}]
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi

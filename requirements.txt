@@ -3,3 +3,4 @@ uvicorn[standard]
 playwright
 Pillow
 python-multipart
+python-dotenv
